@@ -1,0 +1,23 @@
+{
+  "name": "Split",
+  "version": "0.0.1",
+  "permissions": [
+    "tabs",
+    "http://localhost:3000/*"
+  ],
+  "icons": {
+    "48" : "sample-48.png",
+    "128" : "sample-128.png"
+  },
+  "background_page" : "background.html",
+  "browser_action": {
+    "default_title": "Split",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+        "matches": ["http://*/*"],
+        "js": ["contentScript.js"]
+    }
+  ]
+}

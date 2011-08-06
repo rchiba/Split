@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--
+ * Copyright (c) 2010 The Chromium Authors. All rights reserved.  Use of this
+ * source code is governed by a BSD-style license that can be found in the
+ * LICENSE file.
+-->
+<html>
+  <head>
+   <script type="text/javascript" src="http://localhost:3000/nowjs/now.js"></script>
+   <script type="text/javascript" src="http://localhost:3000/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <script>
+    // Global window objects that are retained throughout the session
+    var PrimaryWindow;
+    var SecondaryWindow;
+
+    // setup called when "connect" is pressed in the popup
+    function setup(key){
+            if(!key){
+                return
+            }           
+ 
+            // Connect to host to see if group is valid
+            now.connect(key, function(res){
+                if(res.status==1){
+                    // if successful, then split the windows
+                    splitScreen();
+                }
+                else{
+                    // do nothing, maybe alert the user
+                    connectionFail();
+                }
+            });
+    }
+
+    // This method runs when connection fails
+    function connectionFail(){
+        //stub
+    }
+
+    // This method arranges the windows and sets up the global window objects
+    function splitScreen(){
+
+        console.log('setting up the double windows');
+        // get current window to determine spacings
+        chrome.windows.getCurrent(function(win){   
+            PrimaryWindow = win;
+            // create the listener win on the left
+            var newWinCfg={
+                "url":"waiting.html",
+                "width":win.width/2,
+                "height":win.height,
+                "left":win.left,
+                "top":win.top,
+                "focused":false,
+                "type":"normal"
+            }
+            console.log('about to create new window');
+            console.log(newWinCfg);
+            chrome.windows.create(newWinCfg,function(secondaryWin){
+                SecondaryWindow = secondaryWin;
+                // resize the current (main) window
+                var mainWinCfg={
+                    "left":win.left+win.width/2,
+                    "width":win.width/2,
+                    "focused":true
+                }
+                console.log('About to update main win');
+                console.log(mainWinCfg);
+                chrome.windows.update(win.id,mainWinCfg,function(){
+                    // All done
+                });
+            });
+        });
+    }// End splitScreen()
+
+    now.receiveMessage = function(msg){
+        console.log('received message from host');
+    }
+
+
+    // Triggered by contentScript when any changes happen on client broadcaster
+    chrome.extension.onRequest.addListener(
+        function(request,sender,sendResponse){
+            // If the primary window is sending the request, then process
+            if(sender.tab.windowId === PrimaryWindow.id){
+
+                    // Called when a new pages is loaded and window.onloads
+                    if (request.action === 'windowOnload'){
+                        console.log('background: windowOnload called');
+                        chrome.windows.getLastFocused(function(win){
+                            chrome.tabs.getSelected(win.id, function(tab){
+                                console.log('background: url is '+tab.url);
+                                var url = tab.url;
+                                console.log('distributing message');
+                                now.distributeMessage({'url':url});
+                            })
+                        })
+                    }// End windowOnload
+            }
+        });// End addListener
+    </script>
+  </body>
+</html>
