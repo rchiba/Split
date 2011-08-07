@@ -13,15 +13,23 @@
     // Global window objects that are retained throughout the session
     var PrimaryWindow;
     var SecondaryWindow;
-    window.onload = function(){
+    var self = this;
+    // init called once when background is loaded
+    function init(){
+        console.log('init triggered');
+        chrome.windows.getCurrent(function(win){PrimaryWindow = win});
+    }
+
     // setup called when "connect" is pressed in the popup
     function setup(key){
+            console.log('setup triggered');
             if(!key){
                 return
             }           
  
             // Connect to host to see if group is valid
             now.connect(key, function(res){
+                console.log('connected to host with response '+JSON.stringify(res));
                 if(res.status==1){
                     // if successful, then split the windows
                     splitScreen();
@@ -36,6 +44,7 @@
     // This method runs when connection fails
     function connectionFail(){
         //stub
+        console.log('connection Fail');
     }
     // This method arranges the windows and sets up the global window objects
     function splitScreen(){
@@ -78,21 +87,21 @@
 
         console.log('setting up the single windows');
         
-        // close secondary screen
-        chrome.windows.remove(SecondaryWindow.id);
+        // null secondarywindow global
         SecondaryWindow = null;
 
         // Resize main screen
         var originalCfg = {
-            "width":PrimaryWindow.width*2,
-            "left":PrimaryWindow.left-PrimaryWindow.width
+            "width":PrimaryWindow.width,
+            "left":PrimaryWindow.left
         }
-        chrome.windows.update(PrimaryWindow,originalCfg);
+        chrome.windows.update(PrimaryWindow.id,originalCfg);
 
     }// End revertScreen()
 
     // This method disconnects the user from the server
     function disconnect(){
+        console.log('disconnecting '+this.user.clientId);
         var cid = this.user.clientId;
         this.getGroups(function(groups){
             for(i in groups){
@@ -105,11 +114,12 @@
 
     // This method decides what to do when a window is removed
     chrome.windows.onRemoved.addListener(function(wid){
-       
         if(SecondaryWindow){
+            console.log('secondary window exists');
             // If the secondary window is closed, revert screen and go back to normal mode
-            if(wid===SecondaryWindow.id){
+            if(wid==SecondaryWindow.id){
                 revertScreen();
+                disconnect();
             }
         }
 
@@ -129,9 +139,9 @@
     // Triggered by contentScript when any changes happen on client broadcaster
     chrome.extension.onRequest.addListener(
         function(request,sender,sendResponse){
+            self.getGroups(function(g){console.log('in groups ');console.log(g);});
             // If the primary window is sending the request, then process
-            if(sender.tab.windowId === PrimaryWindow.id){
-
+            if(sender.tab.windowId === PrimaryWindow.id && SecondaryWindow !== null){
                     // Called when a new pages is loaded and window.onloads
                     if (request.action === 'windowOnload'){
                         console.log('background: windowOnload called');
@@ -147,7 +157,9 @@
             }
         });// End addListener
 
-    }// END window.onload
+    window.onload = function(){init()}
+    init();
+
     </script>
   </body>
 </html>
