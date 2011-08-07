@@ -13,7 +13,7 @@
     // Global window objects that are retained throughout the session
     var PrimaryWindow;
     var SecondaryWindow;
-
+    window.onload = function(){
     // setup called when "connect" is pressed in the popup
     function setup(key){
             if(!key){
@@ -37,7 +37,6 @@
     function connectionFail(){
         //stub
     }
-
     // This method arranges the windows and sets up the global window objects
     function splitScreen(){
 
@@ -73,52 +72,58 @@
             });
         });
     }// End splitScreen()
-    
-    // This method returns the browsing perspective to its original state and sets up the global window objects
-    function splitScreen(){
 
-        console.log('setting up the single window');
-        // remove the secondary window
-        chrome.windows.remove(SecondaryWindow.id);
+    // This method reverts the windows to the normal state
+    function revertScreen(){
+
+        console.log('setting up the single windows');
         
-        // restore primary to original state
-        var originalCfg = //I AM HERE
-        chrome.windows.update(originalCfg,PrimaryWindow.id,
-         
-        chrome.windows.getCurrent(function(win){   
-            PrimaryWindow = win;
-            // create the listener win on the left
-            var newWinCfg={
-                "url":"waiting.html",
-                "width":win.width/2,
-                "height":win.height,
-                "left":win.left,
-                "top":win.top,
-                "focused":false,
-                "type":"normal"
-            }
-            console.log('about to create new window');
-            console.log(newWinCfg);
-            chrome.windows.create(newWinCfg,function(secondaryWin){
-                SecondaryWindow = secondaryWin;
-                // resize the current (main) window
-                var mainWinCfg={
-                    "left":win.left+win.width/2,
-                    "width":win.width/2,
-                    "focused":true
-                }
-                console.log('About to update main win');
-                console.log(mainWinCfg);
-                chrome.windows.update(win.id,mainWinCfg,function(){
-                    // All done
-                });
-            });
-        });
-    }// End splitScreen()
+        // close secondary screen
+        chrome.windows.remove(SecondaryWindow.id);
+        SecondaryWindow = null;
 
+        // Resize main screen
+        var originalCfg = {
+            "width":PrimaryWindow.width*2,
+            "left":PrimaryWindow.left-PrimaryWindow.width
+        }
+        chrome.windows.update(PrimaryWindow,originalCfg);
+
+    }// End revertScreen()
+
+    // This method disconnects the user from the server
+    function disconnect(){
+        var cid = this.user.clientId;
+        this.getGroups(function(groups){
+            for(i in groups){
+                if(groups[i]!== 'everyone'){
+                    groups[i].removeUser(cid)
+                }
+            }
+        })
+    }
+
+    // This method decides what to do when a window is removed
+    chrome.windows.onRemoved.addListener(function(wid){
+       
+        if(SecondaryWindow){
+            // If the secondary window is closed, revert screen and go back to normal mode
+            if(wid===SecondaryWindow.id){
+                revertScreen();
+            }
+        }
+
+    })
+
+
+    // This method defines what happens after server sends a message
     now.receiveMessage = function(msg){
         console.log('received message from host');
-    }
+		console.log(JSON.stringify(msg));
+    	
+		// Set secondary url to page
+		chrome.windows.update(SecondaryWindow.id,{"url":msg.url});
+	}
 
 
     // Triggered by contentScript when any changes happen on client broadcaster
@@ -141,6 +146,8 @@
                     }// End windowOnload
             }
         });// End addListener
+
+    }// END window.onload
     </script>
   </body>
 </html>
