@@ -7,7 +7,6 @@
 <html>
   <head>
    <script type="text/javascript" src="http://localhost:3000/nowjs/now.js"></script>
-   <script type="text/javascript" src="http://localhost:3000/socket.io/socket.io.js"></script>
   </head>
   <body>
     <script>
@@ -44,6 +43,48 @@
 
         console.log('setting up the double windows');
         // get current window to determine spacings
+        chrome.windows.getCurrent(function(win){   
+            PrimaryWindow = win;
+            // create the listener win on the left
+            var newWinCfg={
+                "url":"waiting.html",
+                "width":win.width/2,
+                "height":win.height,
+                "left":win.left,
+                "top":win.top,
+                "focused":false,
+                "type":"normal"
+            }
+            console.log('about to create new window');
+            console.log(newWinCfg);
+            chrome.windows.create(newWinCfg,function(secondaryWin){
+                SecondaryWindow = secondaryWin;
+                // resize the current (main) window
+                var mainWinCfg={
+                    "left":win.left+win.width/2,
+                    "width":win.width/2,
+                    "focused":true
+                }
+                console.log('About to update main win');
+                console.log(mainWinCfg);
+                chrome.windows.update(win.id,mainWinCfg,function(){
+                    // All done
+                });
+            });
+        });
+    }// End splitScreen()
+    
+    // This method returns the browsing perspective to its original state and sets up the global window objects
+    function splitScreen(){
+
+        console.log('setting up the single window');
+        // remove the secondary window
+        chrome.windows.remove(SecondaryWindow.id);
+        
+        // restore primary to original state
+        var originalCfg = //I AM HERE
+        chrome.windows.update(originalCfg,PrimaryWindow.id,
+         
         chrome.windows.getCurrent(function(win){   
             PrimaryWindow = win;
             // create the listener win on the left

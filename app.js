@@ -43,6 +43,8 @@ var everyone = require('now').initialize(app);
 everyone.now.connect = function(key,callback){
     // a group consists of 2 people (for now)
     console.log('connect called with key: '+key);
+    console.log('clientid is: '+this.user.clientId);
+    var clientId = this.user.clientId;
     var maxUsers = 2;
     var group = nowjs.getGroup(key);
     group.count(function(userNum){
@@ -54,8 +56,8 @@ everyone.now.connect = function(key,callback){
         }
 
         if(userNum<maxUsers){
-            console.log('group approves, adding user with clientId: '+this.user.clientId);
-            group.addUser(this.user.clientId);
+            console.log('group approves, adding user with clientId: '+clientId);
+            group.addUser(clientId);
             callback({"status":"1"});
         }
         else{

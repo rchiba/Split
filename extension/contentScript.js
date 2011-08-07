@@ -1,4 +1,3 @@
-<script>
 window.onload = function(){
     // Whenever the window loads, let the background know
     chrome.extension.sendRequest({'action' : 'windowOnload'});
@@ -6,4 +5,3 @@ window.onload = function(){
     // Listen for any scroll movements and send them too
 
 }
-</script>
