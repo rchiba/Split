@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <!--
- * Copyright (c) 2010 The Chromium Authors. All rights reserved.  Use of this
+ * Copyright (c) 2011 Ryo Chiba. All rights reserved.  Use of this
  * source code is governed by a BSD-style license that can be found in the
  * LICENSE file.
 -->
 <html>
   <head>
-   <script type="text/javascript" src="http://localhost:3000/nowjs/now.js"></script>
+   <!-- this now gets dynamically loaded <script type="text/javascript" src="http://localhost:3000/nowjs/now.js"></script> -->
   </head>
   <body>
     <script>
@@ -14,7 +14,7 @@
     var PrimaryWindow;
     var SecondaryWindow;
     var self = this;
-    // init called once when background is loaded
+    // init called once when background and dependcies are loaded
     function init(){
         console.log('init triggered');
         chrome.windows.getCurrent(function(win){PrimaryWindow = win});
@@ -22,24 +22,40 @@
 
     // setup called when "connect" is pressed in the popup
     function setup(key){
+        try{
             console.log('setup triggered');
             if(!key){
+                console.log('no key!');
                 return
-            }           
- 
-            // Connect to host to see if group is valid
-            now.connect(key, function(res){
-                console.log('connected to host with response '+JSON.stringify(res));
-                if(res.status==1){
-                    // if successful, then split the windows
-                    splitScreen();
+            }
+            // Support for reconnect is coming soon...
+            if(document.getElementById('nowScript')){
+               console.log('reusing existing now namespace');
+               now.core.socketio.socket.reconnect();
+               console.log('now.ready, so about to call now.connect'); 
+               // now.ready takes care of firing connection
+                
+            }else{ 
+            // otherwise, load up the script and add client side funcs
+                console.log('creating new now namespace');
+                var head = document.getElementsByTagName('head')[0];
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.id = 'nowScript';
+                script.src = 'http://localhost:3000/nowjs/now.js';
+                script.onload=function(){
+                    console.log('now js onload complete');
+                    loadNowFuncs();
                 }
-                else{
-                    // do nothing, maybe alert the user
-                    connectionFail();
-                }
-            });
+
+                head.appendChild(script);
+            }
+        }catch(err){
+            console.log(err.stack);
+        }
     }
+
+
 
     // This method runs when connection fails
     function connectionFail(){
@@ -56,7 +72,7 @@
             // create the listener win on the left
             var newWinCfg={
                 "url":"waiting.html",
-                "width":win.width/2,
+                "width":Math.floor(win.width/2),
                 "height":win.height,
                 "left":win.left,
                 "top":win.top,
@@ -69,8 +85,8 @@
                 SecondaryWindow = secondaryWin;
                 // resize the current (main) window
                 var mainWinCfg={
-                    "left":win.left+win.width/2,
-                    "width":win.width/2,
+                    "left":Math.floor(win.left+win.width/2),
+                    "width":Math.floor(win.width/2),
                     "focused":true
                 }
                 console.log('About to update main win');
@@ -98,18 +114,10 @@
         chrome.windows.update(PrimaryWindow.id,originalCfg);
 
     }// End revertScreen()
-
-    // This method disconnects the user from the server
+    
+    // This method is called when disconnecting socket connections
     function disconnect(){
-        console.log('disconnecting '+this.user.clientId);
-        var cid = this.user.clientId;
-        this.getGroups(function(groups){
-            for(i in groups){
-                if(groups[i]!== 'everyone'){
-                    groups[i].removeUser(cid)
-                }
-            }
-        })
+        now.core.socketio.disconnect();
     }
 
     // This method decides what to do when a window is removed
@@ -124,22 +132,42 @@
         }
 
     })
+    
+    // This method is called after now namespace is established, so functions can be populated
+    function loadNowFuncs(){
+            console.log('loadNowFuncs called');
+            // This method defines what happens after server sends a message
+            now.receiveMessage = function(msg){
+                console.log('received message from host');
+                console.log(JSON.stringify(msg));
+                
+                // Set secondary url to page
+                chrome.windows.update(SecondaryWindow.id,{"url":msg.url});
+            }
 
+            // when now becomes ready, fire the connect function 
+            now.ready(function(){
+                console.log('now.ready, so about to call now.connect'); 
+                // Connect to host to see if group is valid
+                now.connect(key, function(res){
+                    console.log('connected to host with response '+JSON.stringify(res));
+                    if(res.status==1){
+                        // if successful, then split the windows
+                        splitScreen();
+                    }
+                    else{
+                        // do nothing, maybe alert the user
+                        connectionFail();
+                    }
+                });
+            });
 
-    // This method defines what happens after server sends a message
-    now.receiveMessage = function(msg){
-        console.log('received message from host');
-		console.log(JSON.stringify(msg));
-    	
-		// Set secondary url to page
-		chrome.windows.update(SecondaryWindow.id,{"url":msg.url});
-	}
+    }
 
-
+    /* I think I'll use the contentScript in the future for something
     // Triggered by contentScript when any changes happen on client broadcaster
     chrome.extension.onRequest.addListener(
         function(request,sender,sendResponse){
-            self.getGroups(function(g){console.log('in groups ');console.log(g);});
             // If the primary window is sending the request, then process
             if(sender.tab.windowId === PrimaryWindow.id && SecondaryWindow !== null){
                     // Called when a new pages is loaded and window.onloads
@@ -156,9 +184,34 @@
                     }// End windowOnload
             }
         });// End addListener
+    */
+
+
+    // Triggered when tab focus changes, sends message
+    chrome.tabs.onSelectionChanged.addListener(function(tabId, selectInfo){
+        if(selectInfo.windowId==PrimaryWindow.id){
+            chrome.tabs.get(tabId, function(tab){
+                console.log('selection changed, distributing message: '+tab.url);
+                now.distributeMessage({'url':tab.url});
+            });
+        }
+    });
+
+
+    // Triggered when tab is updated, sends message
+    chrome.tabs.onUpdated.addListener(function(tabId, changeInfo){
+        if(changeInfo.url){
+            chrome.tabs.get(tabId, function(tab){
+                if(tab.windowId==PrimaryWindow.id){
+                    console.log('selection changed, distributing message: '+tab.url);
+                    now.distributeMessage({'url':tab.url});
+                }
+            });
+        }
+    });
+
 
     window.onload = function(){init()}
-    init();
 
     </script>
   </body>

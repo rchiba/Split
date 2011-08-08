@@ -68,6 +68,22 @@ everyone.now.connect = function(key,callback){
 }
 
 
+// Disconnect allows a client to leave a group
+// this is exposed to everyone
+everyone.now.disconnect = function(){
+    var cid = this.user.clientId;
+    console.log('disconnect called with: '+cid);
+    this.getGroups(function(groups){
+        console.log('groups fetched: '+groups);
+        
+        for (i in groups){
+            console.log('removing '+cid+' from group '+groups[i]);
+            var g = nowjs.getGroup(groups[i]);
+            g.removeUser(cid);
+        }
+    });
+}
+
 // attaches necessary handlers to new groups
 function attachGroupHandlers(group){
    
@@ -76,6 +92,7 @@ function attachGroupHandlers(group){
     // Message distribution method
     group.now.distributeMessage = function(msg){
         // send message to everybody except whoever sent it
+        console.log('distribugint message: '+JSON.stringify(msg));
         group.exclude([this.user.clientId]).now.receiveMessage(msg);
     }
 }
