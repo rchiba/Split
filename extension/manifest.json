@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "permissions": [
     "tabs",
-    "http://localhost:3000/*"
+    "http://localhost:3000/*",
+    "http://50.18.178.2/*"
   ],
   "icons": {
     "48" : "48.png",

@@ -33,7 +33,7 @@ app.get('/', function(req, res){
   });
 });
 
-app.listen(5000);
+app.listen(80);
 var everyone = require('now').initialize(app);
 
 // Now.js stuff that handles all extension connections
