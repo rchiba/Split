@@ -131,7 +131,17 @@
             }
         }
 
-    })
+    });
+
+    function getCurrentWindow(){
+        chrome.windows.getCurrent(function(win){console.log(win.tabs)});
+    }
+
+    function testScroll(tabId,x,y){
+        chrome.tabs.executeScript(tabId,
+            {code:'var myFx=new Fx.Scroll($(window)).start('+x+','+y+')'}
+        );
+    }
     
     // This method is called after now namespace is established, so functions can be populated
     function loadNowFuncs(){
@@ -142,7 +152,15 @@
                 console.log(JSON.stringify(msg));
                 
                 // Set secondary url to page
-                chrome.windows.update(SecondaryWindow.id,{"url":msg.url});
+                if(msg.url){
+                    chrome.tabs.update(SecondaryWindow.tabs[0].id,{"url":msg.url});
+                }
+                if(msg.pageXOffset&&msg.pageYOffset){
+                    chrome.tabs.executeScript(SecondaryWindow.tabs[0].id,
+                        {code:'var myFx=new Fx.Scroll($(window)).start('+msg.pageXOffset+','+msg.pageYOffset+')'}
+                    );
+                }
+
             }
 
             // when now becomes ready, fire the connect function 
@@ -164,27 +182,19 @@
 
     }
 
-    /* I think I'll use the contentScript in the future for something
     // Triggered by contentScript when any changes happen on client broadcaster
     chrome.extension.onRequest.addListener(
         function(request,sender,sendResponse){
             // If the primary window is sending the request, then process
             if(sender.tab.windowId === PrimaryWindow.id && SecondaryWindow !== null){
                     // Called when a new pages is loaded and window.onloads
-                    if (request.action === 'windowOnload'){
-                        console.log('background: windowOnload called');
-                        chrome.windows.getLastFocused(function(win){
-                            chrome.tabs.getSelected(win.id, function(tab){
-                                console.log('background: url is '+tab.url);
-                                var url = tab.url;
-                                console.log('distributing message');
-                                now.distributeMessage({'url':url});
-                            })
-                        })
-                    }// End windowOnload
+                    if (request.action === 'windowScroll'){
+                        console.log('background: windowScroll called with '+JSON.stringify(request.data));               
+                        now.distributeMessage(request.data);
+                    }// End windowScroll 
             }
         });// End addListener
-    */
+    
 
 
     // Triggered when tab focus changes, sends message
