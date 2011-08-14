@@ -153,12 +153,19 @@
                 
                 // Set secondary url to page
                 if(msg.url){
+                    console.log('about to update url of secondary window');
                     chrome.tabs.update(SecondaryWindow.tabs[0].id,{"url":msg.url});
                 }
-                if(msg.pageXOffset&&msg.pageYOffset){
-                    chrome.tabs.executeScript(SecondaryWindow.tabs[0].id,
-                        {code:'var myFx=new Fx.Scroll($(window)).start('+msg.pageXOffset+','+msg.pageYOffset+')'}
-                    );
+                if(msg.pageXOffset||msg.pageYOffset){
+                    console.log('about to fire scrollTo');
+                    chrome.extension.sendRequest(
+                        {'action':'scrollTo'
+                        ,'data':{
+                            'pageXOffset':msg.pageXOffset,
+                            'pageYOffset':msg.pageYOffset
+                        }
+
+                        }
                 }
 
             }
