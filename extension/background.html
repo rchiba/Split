@@ -157,8 +157,8 @@
                     chrome.tabs.update(SecondaryWindow.tabs[0].id,{"url":msg.url});
                 }
                 if(msg.pageXOffset||msg.pageYOffset){
-                    console.log('about to fire scrollTo');
-                    chrome.extension.sendRequest(
+                    console.log('about to fire scrollTo request to tab '+SecondaryWindow.tabs[0].id);
+                    chrome.tabs.sendRequest(SecondaryWindow.tabs[0].id,
                         {'action':'scrollTo'
                         ,'data':{
                             'pageXOffset':msg.pageXOffset,
@@ -202,6 +202,7 @@
                         now.distributeMessage(request.data);
                     }// End windowScroll 
             }
+            sendResponse({});
         });// End addListener
     
 
