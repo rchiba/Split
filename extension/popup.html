@@ -2,11 +2,12 @@
 <head>
 <script>
 window.onload = function(){
-chrome.extension.getBackgroundPage().setup("Ryo");
+//chrome.extension.getBackgroundPage().setup("Ryo");
 }
 </script>
 </head>
 <body style="height:50px;width:200px">
+Enter shared codeword:
 <input type="text" name="input" id="input"></input>
 <button type="button" onclick="chrome.extension.getBackgroundPage().setup(document.getElementById('input').value)">Connect</button>
 </body>
