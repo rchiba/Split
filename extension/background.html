@@ -163,9 +163,9 @@
                         ,'data':{
                             'pageXOffset':msg.pageXOffset,
                             'pageYOffset':msg.pageYOffset
-                        }
+                            }
 
-                        }
+                        })
                 }
 
             }
@@ -177,8 +177,10 @@
                 now.connect(key, function(res){
                     console.log('connected to host with response '+JSON.stringify(res));
                     if(res.status==1){
-                        // if successful, then split the windows
-                        splitScreen();
+                        if(!SecondaryWindow){ // This is a strange error case
+                            // if successful, then split the windows
+                            splitScreen();
+                        }
                     }
                     else{
                         // do nothing, maybe alert the user
