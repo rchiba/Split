@@ -6,8 +6,8 @@ window.onload = function(){
 }
 </script>
 </head>
-<body style="height:50px;width:200px">
-Enter shared codeword:
+<body style="height:50px;width:160px">
+Enter shared passphrase:
 <input type="text" name="input" id="input"></input>
 <button type="button" onclick="chrome.extension.getBackgroundPage().setup(document.getElementById('input').value)">Connect</button>
 </body>
