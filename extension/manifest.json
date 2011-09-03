@@ -1,6 +1,6 @@
 {
   "name": "Split",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Splits the screen, so you can surf the 'net with a friend.",
   "permissions": [
     "tabs",

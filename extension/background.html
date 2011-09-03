@@ -14,6 +14,7 @@
     var PrimaryWindow;
     var SecondaryWindow;
     var self = this;
+	window.key = "";
     // init called once when background and dependcies are loaded
     function init(){
         console.log('init triggered');
@@ -23,34 +24,42 @@
     // setup called when "connect" is pressed in the popup
     function setup(key){
         try{
-            console.log('setup triggered');
+            console.log('setup triggered with key '+key);
             if(!key){
                 console.log('no key!');
                 return
             }
+			window.key=key;
+			
             // Support for reconnect is coming soon...
             if(document.getElementById('nowScript')){
-               console.log('reusing existing now namespace');
+			   //console.log('nowScript detected, so deleting');
+			   //var nowScript = document.getElementById('nowScript');
+			   //nowScript.parentNode.removeChild(nowScript);
+               
+			   console.log('reusing existing now namespace');
                now.core.socketio.socket.reconnect();
-               console.log('now.ready, so about to call now.connect'); 
+			   
+			   //console.log('now.ready, so about to call now.connect'); 
                // now.ready takes care of firing connection
                 
-            }else{ 
-            // otherwise, load up the script and add client side funcs
-                console.log('creating new now namespace');
-                var head = document.getElementsByTagName('head')[0];
-                var script = document.createElement('script');
-                script.type = 'text/javascript';
-                script.id = 'nowScript';
-                script.src = 'http://50.18.178.2/nowjs/now.js';
-                script.onload=function(){
-                    console.log('now js onload complete');
-                    loadNowFuncs();
-                }
-
-                head.appendChild(script);
             }
-        }catch(err){
+			else{
+            // otherwise, load up the script and add client side funcs
+					console.log('creating new now namespace');
+					var head = document.getElementsByTagName('head')[0];
+					var script = document.createElement('script');
+					script.type = 'text/javascript';
+					script.id = 'nowScript';
+					script.src = 'http://50.18.178.2/nowjs/now.js';
+					script.onload=function(){
+						console.log('now js onload complete');
+						loadNowFuncs();
+					}
+
+					head.appendChild(script);
+			}
+		}catch(err){
             console.log(err.stack);
         }
     }
@@ -73,7 +82,7 @@
             var newWinCfg={
                 "url":"waiting.html",
                 "width":Math.floor(win.width/2),
-                "height":win.height,
+                "height":PrimaryWindow.height,
                 "left":win.left,
                 "top":win.top,
                 "focused":false,
@@ -87,6 +96,7 @@
                 var mainWinCfg={
                     "left":Math.floor(win.left+win.width/2),
                     "width":Math.floor(win.width/2),
+					"height":PrimaryWindow.height,
                     "focused":true
                 }
                 console.log('About to update main win');
@@ -118,6 +128,7 @@
     // This method is called when disconnecting socket connections
     function disconnect(){
         now.core.socketio.disconnect();
+		//delete now;
     }
 
     // This method decides what to do when a window is removed
@@ -145,7 +156,7 @@
     
     // This method is called after now namespace is established, so functions can be populated
     function loadNowFuncs(){
-            console.log('loadNowFuncs called');
+            console.log('loadNowFuncs called with key '+window.key);
             // This method defines what happens after server sends a message
             now.receiveMessage = function(msg){
                 console.log('received message from host');
@@ -172,9 +183,9 @@
 
             // when now becomes ready, fire the connect function 
             now.ready(function(){
-                console.log('now.ready, so about to call now.connect'); 
+                console.log('now.ready, so about to call now.connect with key '+window.key); 
                 // Connect to host to see if group is valid
-                now.connect(key, function(res){
+                now.connect(window.key, function(res){
                     console.log('connected to host with response '+JSON.stringify(res));
                     if(res.status==1){
                         if(!SecondaryWindow){ // This is a strange error case
@@ -197,7 +208,7 @@
             // If the primary window is sending the request, then process
             if(sender.tab.windowId === PrimaryWindow.id && SecondaryWindow !== null){
                     // Called when a new pages is loaded and window.onloads
-                    if (request.action === 'windowScroll'){
+                    if (request.action === 'windowScroll' && now){
                         console.log('background: windowScroll called with '+JSON.stringify(request.data));               
                         now.distributeMessage(request.data);
                     }// End windowScroll 
@@ -209,7 +220,7 @@
 
     // Triggered when tab focus changes, sends message
     chrome.tabs.onSelectionChanged.addListener(function(tabId, selectInfo){
-        if(selectInfo.windowId==PrimaryWindow.id){
+        if(selectInfo.windowId==PrimaryWindow.id && now.distributeMessage){
             chrome.tabs.get(tabId, function(tab){
                 console.log('selection changed, distributing message: '+tab.url);
                 now.distributeMessage({'url':tab.url});
@@ -220,7 +231,7 @@
 
     // Triggered when tab is updated, sends message
     chrome.tabs.onUpdated.addListener(function(tabId, changeInfo){
-        if(changeInfo.url){
+        if(changeInfo.url && now.distributeMessage){
             chrome.tabs.get(tabId, function(tab){
                 if(tab.windowId==PrimaryWindow.id){
                     console.log('selection changed, distributing message: '+tab.url);
